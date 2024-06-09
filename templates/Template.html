@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text/Audio to Video Converter</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+        }
+        form {
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+        }
+        input[type="file"],
+        input[type="text"] {
+            margin-bottom: 20px;
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            transition: border-color 0.3s ease;
+        }
+        input[type="file"]:focus,
+        input[type="text"]:focus {
+            border-color: #007BFF;
+        }
+        .btn-primary {
+            width: 100%;
+            margin-top: 10px;
+        }
+        .video-container {
+            margin-top: 20px;
+        }
+        video {
+            width: 100%;
+            max-width: 720px;
+            height: auto;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Text/Audio to Video Converter</h1>
+    <form id="uploadForm">
+        <input type="file" name="audio" id="audioInput" accept="audio/*" style="display: none;">
+        <input type="text" name="text" id="textInput" placeholder="Enter text to convert" style="display: none;">
+        <button type="button" class="btn btn-primary" onclick="toggleInput('audio')">Upload Audio</button>
+        <button type="button" class="btn btn-primary" onclick="toggleInput('text')">Enter Text</button>
+        <button type="submit" class="btn btn-success">Convert to Video</button>
+    </form>
+    <div class="video-container" id="videoContainer" style="display: none;">
+        <h2>Generated Video</h2>
+        <video id="outputVideo" controls></video>
+    </div>
+    <div id="timerContainer" style="display: none;">
+        <h2>Processing...</h2>
+        <p id="timer">Time elapsed: <span id="timeElapsed">0</span> seconds</p>
+    </div>
+
+    <script>
+        let timerInterval;
+
+        function toggleInput(inputType) {
+            if (inputType === 'audio') {
+                document.getElementById('audioInput').style.display = 'block';
+                document.getElementById('textInput').style.display = 'none';
+            } else {
+                document.getElementById('audioInput').style.display = 'none';
+                document.getElementById('textInput').style.display = 'block';
+            }
+        }
+
+        document.getElementById('uploadForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            var formData = new FormData();
+            var inputType = document.getElementById('audioInput').style.display !== 'none' ? 'audio' : 'text';
+
+            if (inputType === 'audio') {
+                formData.append('audio', document.querySelector('input[type="file"]').files[0]);
+            } else {
+                formData.append('text', document.querySelector('input[type="text"]').value);
+            }
+
+            startTimer();
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                stopTimer();
+                if (data.status === 'Processing completed') {
+                    document.getElementById('videoContainer').style.display = 'block';
+                    document.getElementById('outputVideo').src = data.video_url;
+                } else {
+                    alert('Error: Unable to generate video');
+                }
+            })
+            .catch(error => {
+                stopTimer();
+                console.error('Error:', error);
+            });
+        });
+
+        function startTimer() {
+            document.getElementById('timerContainer').style.display = 'block';
+            let startTime = Date.now();
+
+            timerInterval = setInterval(function() {
+                let elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+                document.getElementById('timeElapsed').textContent = elapsedTime;
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+            document.getElementById('timerContainer').style.display = 'none';
+            document.getElementById('timeElapsed').textContent = '0';
+        }
+    </script>
+</body>
+</html>
